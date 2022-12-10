@@ -1,0 +1,39 @@
+{
+  "project_info": {
+    "project_number": "778908630347",
+    "project_id": "jobapp-30727",
+    "storage_bucket": "jobapp-30727.appspot.com"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:778908630347:android:4e57c4ec09eca255467cce",
+        "android_client_info": {
+          "package_name": "com.example.eamon_app"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "778908630347-k4pu5nrnie68cccmcpdo4bh1cagb5llb.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyC7oFIITV8rAoKMQsPBoZfBoNOQIVdt7Kk"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "778908630347-k4pu5nrnie68cccmcpdo4bh1cagb5llb.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
