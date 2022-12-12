@@ -1,12 +1,16 @@
-// ignore_for_file: unused_import, file_names
+// ignore_for_file: unused_import, file_names, unrelated_type_equality_checks, prefer_typing_uninitialized_variables
+
+import 'dart:html' as html;
 
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:eamon_app/home.dart';
 import 'package:firebase_core/firebase_core.dart';
+import 'package:firebase_storage/firebase_storage.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/scheduler.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:flutter/foundation.dart';
 
 class JobForm extends StatefulWidget {
   const JobForm({super.key});
@@ -24,6 +28,8 @@ class _JobFormState extends State<JobForm> {
   String serviceCallValue = '';
   String sqmValue = '';
 
+  List<Uint8List?> photoList = [];
+
   DateTime confirmedDateValue = DateTime.now();
   String confirmedGeolocationValue = '';
 
@@ -36,9 +42,11 @@ class _JobFormState extends State<JobForm> {
   String finalPosition = '';
   bool isChecked = false;
   final ImagePicker _picker = ImagePicker();
+  var bytes;
 
   FirebaseFirestore firestore = FirebaseFirestore.instance;
   CollectionReference jobs = FirebaseFirestore.instance.collection('jobs');
+  final storageRef = FirebaseStorage.instance.ref().child('images');
 
 //Geolocation function
   Future<Position> _determinePosition() async {
@@ -49,7 +57,13 @@ class _JobFormState extends State<JobForm> {
 
   //Image Pick Function
   _pickImage() async {
-    final XFile? photo = await _picker.pickImage(source: ImageSource.camera);
+    //get the photo from camera
+    XFile? photo = await _picker.pickImage(source: ImageSource.camera);
+    bytes = await XFile(photo!.path).readAsBytes();
+    //add the photo to list of photos
+    setState(() {
+      photoList.add(bytes);
+    });
   }
 
   //Add data on submission
@@ -59,12 +73,32 @@ class _JobFormState extends State<JobForm> {
       'geolocation': geolocationValue,
       'docketNumber': docketNumberValue,
       'notes': notesValue,
-      'serviceCallValue': serviceCallValue,
+      'serviceCallValue': serviceCallValue == true ? serviceCallValue : false,
       'sqmValue': sqmValue,
       'confirmedDate': confirmedDateValue,
       'confirmedGeolocationValue': confirmedGeolocationValue,
       'hoursWorked': workedHours
     });
+  }
+
+  //Upload images
+  _uploadImg(List<Uint8List?> pPhotos) async {
+    List convertedPhotos = [];
+
+    if (kIsWeb) {
+      print('guta');
+      for (var p in pPhotos) {
+        convertedPhotos.add(p);
+      }
+
+      for (var file in convertedPhotos) {
+        storageRef.putData(
+            bytes,
+            SettableMetadata(
+              contentType: "image/jpeg",
+            ));
+      }
+    }
   }
 
   @override
@@ -133,6 +167,18 @@ class _JobFormState extends State<JobForm> {
               decoration: const InputDecoration(
                 labelText: 'Docket Number',
               ),
+            ),
+            SizedBox(
+              height: 200,
+              child: ListView.builder(
+                  scrollDirection: Axis.horizontal,
+                  itemCount: photoList.length,
+                  itemBuilder: (context, index) {
+                    return Padding(
+                      padding: const EdgeInsets.only(right: 10),
+                      child: Card(child: Image.memory(photoList[index]!)),
+                    );
+                  }),
             ),
             // TODO: Add photo upload feature for docket
             ElevatedButton(
@@ -229,6 +275,7 @@ class _JobFormState extends State<JobForm> {
                         const SnackBar(content: Text('Loading, please wait')));
 
                     _submitData(hours);
+                    _uploadImg(photoList);
                   }
                 },
                 child: const Text('Submit')),

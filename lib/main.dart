@@ -1,8 +1,11 @@
+import 'dart:html';
+
 import 'package:eamon_app/home.dart';
 import 'package:eamon_app/jobForm.dart';
 import 'package:eamon_app/login.dart';
 import 'package:eamon_app/register.dart';
 import 'package:firebase_core/firebase_core.dart';
+import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'firebase_options.dart';
 
@@ -12,7 +15,9 @@ Future<void> main() async {
           apiKey: 'AIzaSyARJss_EoDoqO5oixp328AzKZV87d48zsk',
           appId: '1:778908630347:web:61edcf2953077290467cce',
           messagingSenderId: '778908630347',
-          projectId: 'jobapp-30727'));
+          projectId: 'jobapp-30727',
+          storageBucket: 'gs://jobapp-30727.appspot.com'));
+
   runApp(MyApp());
 }
 
@@ -24,6 +29,11 @@ class MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
+        scrollBehavior: const MaterialScrollBehavior().copyWith(dragDevices: {
+          PointerDeviceKind.mouse,
+          PointerDeviceKind.touch,
+          PointerDeviceKind.unknown
+        }),
         title: 'Job App',
         routes: {
           'home': (context) => const HomePage(),
@@ -35,9 +45,7 @@ class MyApp extends StatelessWidget {
         home: FutureBuilder(
           future: _init,
           builder: (context, snapshot) {
-            if (snapshot.hasError) {
-              print("Error");
-            }
+            if (snapshot.hasError) {}
             if (snapshot.connectionState == ConnectionState.done) {
               return LoginPage();
             }
