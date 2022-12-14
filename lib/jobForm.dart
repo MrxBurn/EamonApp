@@ -1,6 +1,7 @@
 // ignore_for_file: unused_import, file_names, unrelated_type_equality_checks, prefer_typing_uninitialized_variables
 
 import 'dart:html' as html;
+import 'dart:io';
 
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:eamon_app/home.dart';
@@ -28,7 +29,12 @@ class _JobFormState extends State<JobForm> {
   String serviceCallValue = '';
   String sqmValue = '';
 
-  List<Uint8List?> photoList = [];
+  List<Uint8List> photoList = [];
+  List<File> photoName = [];
+  List<String> docketImagesUrl = [];
+
+  XFile? photo;
+  var bytes;
 
   DateTime confirmedDateValue = DateTime.now();
   String confirmedGeolocationValue = '';
@@ -42,11 +48,9 @@ class _JobFormState extends State<JobForm> {
   String finalPosition = '';
   bool isChecked = false;
   final ImagePicker _picker = ImagePicker();
-  var bytes;
 
   FirebaseFirestore firestore = FirebaseFirestore.instance;
   CollectionReference jobs = FirebaseFirestore.instance.collection('jobs');
-  final storageRef = FirebaseStorage.instance.ref().child('images');
 
 //Geolocation function
   Future<Position> _determinePosition() async {
@@ -58,7 +62,8 @@ class _JobFormState extends State<JobForm> {
   //Image Pick Function
   _pickImage() async {
     //get the photo from camera
-    XFile? photo = await _picker.pickImage(source: ImageSource.camera);
+    photo = await _picker.pickImage(source: ImageSource.camera);
+    photoName.add(File(photo!.name));
     bytes = await XFile(photo!.path).readAsBytes();
     //add the photo to list of photos
     setState(() {
@@ -67,37 +72,40 @@ class _JobFormState extends State<JobForm> {
   }
 
   //Add data on submission
-  _submitData(double workedHours) {
-    jobs.add({
-      'dateTime': dateValue,
-      'geolocation': geolocationValue,
-      'docketNumber': docketNumberValue,
-      'notes': notesValue,
-      'serviceCallValue': serviceCallValue == true ? serviceCallValue : false,
-      'sqmValue': sqmValue,
-      'confirmedDate': confirmedDateValue,
-      'confirmedGeolocationValue': confirmedGeolocationValue,
-      'hoursWorked': workedHours
-    });
-  }
 
   //Upload images
-  _uploadImg(List<Uint8List?> pPhotos) async {
+  _uploadImgAndSubmit(List<Uint8List?> pPhotos, double workedHours) async {
     List convertedPhotos = [];
 
     if (kIsWeb) {
-      print('guta');
       for (var p in pPhotos) {
         convertedPhotos.add(p);
       }
 
-      for (var file in convertedPhotos) {
-        storageRef.putData(
-            bytes,
+      for (int i = 0; i < convertedPhotos.length; i++) {
+        final storageRef =
+            FirebaseStorage.instance.ref().child('dokerPhotos/${photoName[i]}');
+        TaskSnapshot taskSnapshot = await storageRef.putData(
+            convertedPhotos[i],
             SettableMetadata(
               contentType: "image/jpeg",
             ));
+        docketImagesUrl.add(await (taskSnapshot).ref.getDownloadURL());
       }
+      jobs.add({
+        'dateTime': dateValue,
+        'geolocation': geolocationValue,
+        'docketNumber': docketNumberValue,
+        'notes': notesValue,
+        'serviceCallValue': serviceCallValue == true ? serviceCallValue : false,
+        'sqmValue': sqmValue,
+        'confirmedDate': confirmedDateValue,
+        'confirmedGeolocationValue': confirmedGeolocationValue,
+        'hoursWorked': workedHours,
+        'docketImages': docketImagesUrl,
+      });
+
+      print(docketImagesUrl);
     }
   }
 
@@ -176,7 +184,7 @@ class _JobFormState extends State<JobForm> {
                   itemBuilder: (context, index) {
                     return Padding(
                       padding: const EdgeInsets.only(right: 10),
-                      child: Card(child: Image.memory(photoList[index]!)),
+                      child: Card(child: Image.memory(photoList[index])),
                     );
                   }),
             ),
@@ -274,8 +282,7 @@ class _JobFormState extends State<JobForm> {
                     ScaffoldMessenger.of(context).showSnackBar(
                         const SnackBar(content: Text('Loading, please wait')));
 
-                    _submitData(hours);
-                    _uploadImg(photoList);
+                    _uploadImgAndSubmit(photoList, hours);
                   }
                 },
                 child: const Text('Submit')),
