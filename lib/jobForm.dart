@@ -1,6 +1,5 @@
 // ignore_for_file: unused_import, file_names, unrelated_type_equality_checks, prefer_typing_uninitialized_variables
 
-import 'dart:html' as html;
 import 'dart:io';
 
 import 'package:cloud_firestore/cloud_firestore.dart';
@@ -29,12 +28,26 @@ class _JobFormState extends State<JobForm> {
   String serviceCallValue = '';
   String sqmValue = '';
 
-  List<Uint8List> photoList = [];
-  List<File> photoName = [];
+  //Docket Images
+  List<Uint8List> docketPhotoList = [];
+  List<File> docketPhotoNames = [];
   List<String> docketImagesUrl = [];
 
+  //Damaged or Incorrectly Measured Products
+  List<Uint8List> damagedPhotoList = [];
+  List<File> damagedPhotoNames = [];
+  List<String> damagedImagesUrl = [];
+
+  //Fitted Items
+  List<Uint8List> fittedItemsPhotoList = [];
+  List<File> fittedItemsPhotoNames = [];
+  List<String> fittedItemsImagesUrl = [];
   XFile? photo;
   var bytes;
+
+  //All photos required uploaded check
+  bool docketPhotosUploaded = false;
+  bool fittedItemsPhotosUploaded = false;
 
   DateTime confirmedDateValue = DateTime.now();
   String confirmedGeolocationValue = '';
@@ -60,53 +73,80 @@ class _JobFormState extends State<JobForm> {
   }
 
   //Image Pick Function
-  _pickImage() async {
+  _pickImage(List photos, List photoNames) async {
     //get the photo from camera
     photo = await _picker.pickImage(source: ImageSource.camera);
-    photoName.add(File(photo!.name));
+    photoNames.add(File(photo!.name));
     bytes = await XFile(photo!.path).readAsBytes();
     //add the photo to list of photos
     setState(() {
-      photoList.add(bytes);
+      photos.add(bytes);
     });
   }
 
   //Add data on submission
 
   //Upload images
-  _uploadImgAndSubmit(List<Uint8List?> pPhotos, double workedHours) async {
-    List convertedPhotos = [];
-
-    if (kIsWeb) {
-      for (var p in pPhotos) {
-        convertedPhotos.add(p);
-      }
-
-      for (int i = 0; i < convertedPhotos.length; i++) {
-        final storageRef =
-            FirebaseStorage.instance.ref().child('dokerPhotos/${photoName[i]}');
+  _uploadImgAndSubmit(
+      List<Uint8List?> pDocketPhotos,
+      List<Uint8List?> pDamagedPhotos,
+      List<Uint8List?> pFittedItemsPhotos,
+      double workedHours) async {
+    if (pDocketPhotos.isNotEmpty) {
+      for (int i = 0; i < pDocketPhotos.length; i++) {
+        final storageRef = FirebaseStorage.instance
+            .ref()
+            .child('docketPhotos/${docketPhotoNames[i]}');
         TaskSnapshot taskSnapshot = await storageRef.putData(
-            convertedPhotos[i],
+            pDocketPhotos[i]!,
             SettableMetadata(
               contentType: "image/jpeg",
             ));
         docketImagesUrl.add(await (taskSnapshot).ref.getDownloadURL());
       }
-      jobs.add({
-        'dateTime': dateValue,
-        'geolocation': geolocationValue,
-        'docketNumber': docketNumberValue,
-        'notes': notesValue,
-        'serviceCallValue': serviceCallValue == true ? serviceCallValue : false,
-        'sqmValue': sqmValue,
-        'confirmedDate': confirmedDateValue,
-        'confirmedGeolocationValue': confirmedGeolocationValue,
-        'hoursWorked': workedHours,
-        'docketImages': docketImagesUrl,
-      });
-
-      print(docketImagesUrl);
     }
+    if (pDamagedPhotos.isNotEmpty) {
+      for (int i = 0; i < pDamagedPhotos.length; i++) {
+        final storageRef = FirebaseStorage.instance
+            .ref()
+            .child('damaged_incorrectly_products/${damagedPhotoNames[i]}');
+        TaskSnapshot taskSnapshot = await storageRef.putData(
+            pDamagedPhotos[i]!,
+            SettableMetadata(
+              contentType: "image/jpeg",
+            ));
+        damagedImagesUrl.add(await (taskSnapshot).ref.getDownloadURL());
+      }
+    }
+    if (pFittedItemsPhotos.isNotEmpty) {
+      fittedItemsPhotosUploaded = true;
+      for (int i = 0; i < pFittedItemsPhotos.length; i++) {
+        final storageRef = FirebaseStorage.instance
+            .ref()
+            .child('fitted_items/${fittedItemsPhotoNames[i]}');
+        TaskSnapshot taskSnapshot = await storageRef.putData(
+            pFittedItemsPhotos[i]!,
+            SettableMetadata(
+              contentType: "image/jpeg",
+            ));
+        fittedItemsImagesUrl.add(await (taskSnapshot).ref.getDownloadURL());
+      }
+    }
+
+    jobs.add({
+      'dateTime': dateValue,
+      'geolocation': geolocationValue,
+      'docketNumber': docketNumberValue,
+      'notes': notesValue,
+      'serviceCallValue': serviceCallValue == true ? serviceCallValue : false,
+      'sqmValue': sqmValue,
+      'confirmedDate': confirmedDateValue,
+      'confirmedGeolocationValue': confirmedGeolocationValue,
+      'hoursWorked': workedHours,
+      'docketImages': docketImagesUrl,
+      'fittedImages': fittedItemsImagesUrl,
+      'damagedImages': damagedImagesUrl
+    });
   }
 
   @override
@@ -119,176 +159,234 @@ class _JobFormState extends State<JobForm> {
   Widget build(BuildContext context) {
     var media = MediaQuery.of(context).size;
     return Scaffold(
-      appBar: AppBar(title: const Text('Form')),
-      body: Center(
-          child: Container(
-        width: media.width * 0.5,
-        child: Form(
-          key: _formKey,
-          child: Column(children: [
-            TextFormField(
-              onTap: () {
-                dateValue = DateTime.now();
-                startDateTimeText.text = dateValue.toString();
-              },
-              controller: startDateTimeText,
-              validator: ((value) {
-                if (value == null || value.isEmpty) {
-                  return 'Please enter Date & Time';
-                }
-                return null;
-              }),
-              decoration: const InputDecoration(
-                labelText: 'Date & Time',
-                hintText: 'Press to add date',
-              ),
-            ),
-            TextFormField(
-              onTap: () {
-                _determinePosition().then((value) => {
-                      startGeolocationText.text = value.toString(),
-                      geolocationValue = value.toString()
-                    });
-              },
-              controller: startGeolocationText,
-              validator: ((value) {
-                if (value == null || value.isEmpty) {
-                  return 'Please enter geolocation';
-                }
-                return null;
-              }),
-              decoration: const InputDecoration(
-                labelText: 'Geolocation',
-                hintText: 'Press to add geolocation',
-              ),
-            ),
-            TextFormField(
-              onChanged: (value) {
-                docketNumberValue = value;
-              },
-              validator: ((value) {
-                if (value == null || value.isEmpty) {
-                  return 'Please enter Docker Number';
-                }
-                return null;
-              }),
-              decoration: const InputDecoration(
-                labelText: 'Docket Number',
-              ),
-            ),
-            SizedBox(
-              height: 200,
-              child: ListView.builder(
-                  scrollDirection: Axis.horizontal,
-                  itemCount: photoList.length,
-                  itemBuilder: (context, index) {
-                    return Padding(
-                      padding: const EdgeInsets.only(right: 10),
-                      child: Card(child: Image.memory(photoList[index])),
-                    );
+        appBar: AppBar(title: const Text('Form')),
+        body: SingleChildScrollView(
+          child: Center(
+              child: Container(
+            width: media.width * 0.5,
+            child: Form(
+              key: _formKey,
+              child: Column(children: [
+                TextFormField(
+                  onTap: () {
+                    dateValue = DateTime.now();
+                    startDateTimeText.text = dateValue.toString();
+                  },
+                  controller: startDateTimeText,
+                  validator: ((value) {
+                    if (value == null || value.isEmpty) {
+                      return 'Please enter Date & Time';
+                    }
+                    return null;
                   }),
-            ),
-            // TODO: Add photo upload feature for docket
-            ElevatedButton(
-                onPressed: () {
-                  _pickImage();
-                },
-                child: const Text('Upload photo')),
-            // TODO: Upload photos of damage
-            TextFormField(
-              validator: ((value) {
-                return null;
-              }),
-              decoration: const InputDecoration(
-                labelText: 'Notes',
-              ),
-            ),
-            // TODO: Add photo upload of each item fitted
-            CheckboxListTile(
-              title: const Text("Service Call"), //    <-- label
-              value: isChecked,
-              onChanged: (bool? value) {
-                setState(() {
-                  isChecked = value!;
-                });
-                serviceCallValue = value.toString();
-              },
-            ),
-            isChecked == false
-                ? TextFormField(
-                    onChanged: (value) {
-                      sqmValue = value;
+                  decoration: const InputDecoration(
+                    labelText: 'Date & Time',
+                    hintText: 'Press to add date',
+                  ),
+                ),
+                TextFormField(
+                  onTap: () {
+                    _determinePosition().then((value) => {
+                          startGeolocationText.text = value.toString(),
+                          geolocationValue = value.toString()
+                        });
+                  },
+                  controller: startGeolocationText,
+                  validator: ((value) {
+                    if (value == null || value.isEmpty) {
+                      return 'Please enter geolocation';
+                    }
+                    return null;
+                  }),
+                  decoration: const InputDecoration(
+                    labelText: 'Geolocation',
+                    hintText: 'Press to add geolocation',
+                  ),
+                ),
+                TextFormField(
+                  onChanged: (value) {
+                    docketNumberValue = value;
+                  },
+                  validator: ((value) {
+                    if (value == null || value.isEmpty) {
+                      return 'Please enter Docker Number';
+                    }
+                    return null;
+                  }),
+                  decoration: const InputDecoration(
+                    labelText: 'Docket Number',
+                  ),
+                ),
+                SizedBox(
+                  height: 200,
+                  child: ListView.builder(
+                      scrollDirection: Axis.horizontal,
+                      itemCount: docketPhotoList.length,
+                      itemBuilder: (context, index) {
+                        return Padding(
+                          padding: const EdgeInsets.only(right: 10),
+                          child:
+                              Card(child: Image.memory(docketPhotoList[index])),
+                        );
+                      }),
+                ),
+                ElevatedButton(
+                    onPressed: () {
+                      _pickImage(docketPhotoList, docketPhotoNames);
                     },
+                    child: const Text('Upload Docket')),
+                SizedBox(
+                  height: 200,
+                  child: ListView.builder(
+                      scrollDirection: Axis.horizontal,
+                      itemCount: damagedPhotoList.length,
+                      itemBuilder: (context, index) {
+                        return Padding(
+                          padding: const EdgeInsets.only(right: 10),
+                          child: Card(
+                              child: Image.memory(damagedPhotoList[index])),
+                        );
+                      }),
+                ),
+                ElevatedButton(
+                    onPressed: () {
+                      _pickImage(damagedPhotoList, damagedPhotoNames);
+                    },
+                    child: const Text('Upload Damaged&Incorrect')),
+                TextFormField(
+                  decoration: const InputDecoration(
+                    labelText: 'Notes',
+                  ),
+                ),
+                SizedBox(
+                  height: 200,
+                  child: ListView.builder(
+                      scrollDirection: Axis.horizontal,
+                      itemCount: fittedItemsPhotoList.length,
+                      itemBuilder: (context, index) {
+                        return Padding(
+                          padding: const EdgeInsets.only(right: 10),
+                          child: Card(
+                              child: Image.memory(fittedItemsPhotoList[index])),
+                        );
+                      }),
+                ),
+                ElevatedButton(
+                    onPressed: () {
+                      _pickImage(fittedItemsPhotoList, fittedItemsPhotoNames);
+                    },
+                    child: const Text('Upload Fitted')),
+                CheckboxListTile(
+                  title: const Text("Service Call"), //    <-- label
+                  value: isChecked,
+                  onChanged: (bool? value) {
+                    setState(() {
+                      isChecked = value!;
+                    });
+                    serviceCallValue = value.toString();
+                  },
+                ),
+                isChecked == false
+                    ? TextFormField(
+                        onChanged: (value) {
+                          sqmValue = value;
+                        },
+                        validator: ((value) {
+                          return null;
+                        }),
+                        decoration: const InputDecoration(
+                          labelText: 'Sqm Value',
+                        ),
+                      )
+                    : const SizedBox(),
+                const SizedBox(
+                  height: 20,
+                ),
+                ElevatedButton(
+                    onPressed: () {
+                      confirmedDateValue = DateTime.now();
+                      endDateTimeText.text = confirmedDateValue.toString();
+
+                      setState(() {
+                        _determinePosition().then((value) => {
+                              endGeolocationText.text = value.toString(),
+                              confirmedGeolocationValue =
+                                  endGeolocationText.text
+                            });
+                      });
+                    },
+                    child: const Text('Finish Job')),
+                TextFormField(
+                  enabled: true,
+                  controller: endDateTimeText,
+                  validator: ((value) {
+                    if (value == null || value.isEmpty) {
+                      return 'Please enter Date & Time';
+                    }
+                    return null;
+                  }),
+                  decoration: const InputDecoration(
+                    labelText: 'Date & Time',
+                  ),
+                ),
+                TextFormField(
+                    enabled: true,
+                    controller: endGeolocationText,
                     validator: ((value) {
+                      if (value == null || value.isEmpty) {
+                        return 'Please finish job';
+                      }
                       return null;
                     }),
                     decoration: const InputDecoration(
-                      labelText: 'Sqm Value',
-                    ),
-                  )
-                : const SizedBox(),
-            const SizedBox(
-              height: 20,
+                      labelText: 'Geolocation',
+                    )),
+                const SizedBox(
+                  height: 20,
+                ),
+                ElevatedButton(
+                    onPressed: () {
+                      //calculate number of hours worked
+                      final hours =
+                          confirmedDateValue.difference(dateValue).inMinutes /
+                              60;
+                      if (_formKey.currentState!.validate()) {
+                        if (docketPhotoList.isNotEmpty &&
+                            fittedItemsPhotoList.isNotEmpty) {
+                          docketPhotosUploaded = true;
+                          fittedItemsPhotosUploaded = true;
+                        } else {
+                          docketPhotosUploaded = false;
+                          fittedItemsPhotosUploaded = false;
+                        }
+
+                        if (docketPhotosUploaded == true &&
+                            fittedItemsPhotosUploaded == true) {
+                          _uploadImgAndSubmit(docketPhotoList, damagedPhotoList,
+                              fittedItemsPhotoList, hours);
+                          ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+                              content: const Text('Uploaded Successfully!'),
+                              action: SnackBarAction(
+                                  textColor: Colors.green,
+                                  label: 'Success',
+                                  onPressed: () {})));
+                        } else {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                                content: const Text(
+                                    'Please upload docket and/or items fitted photos'),
+                                action: SnackBarAction(
+                                    textColor: Colors.red,
+                                    label: 'Error',
+                                    onPressed: () {})),
+                          );
+                        }
+                      }
+                    },
+                    child: const Text('Submit')),
+              ]),
             ),
-            ElevatedButton(
-                onPressed: () {
-                  confirmedDateValue = DateTime.now();
-                  endDateTimeText.text = confirmedDateValue.toString();
-
-                  setState(() {
-                    _determinePosition().then((value) => {
-                          endGeolocationText.text = value.toString(),
-                          confirmedGeolocationValue = endGeolocationText.text
-                        });
-                  });
-                },
-                child: const Text('Finish Job')),
-            TextFormField(
-              enabled: false,
-              controller: endDateTimeText,
-              validator: ((value) {
-                if (value == null || value.isEmpty) {
-                  return 'Please enter Date & Time';
-                }
-                return null;
-              }),
-              decoration: const InputDecoration(
-                labelText: 'Date & Time',
-              ),
-            ),
-
-            TextFormField(
-                enabled: false,
-                controller: endGeolocationText,
-                validator: ((value) {
-                  if (value == null || value.isEmpty) {
-                    return 'Please finish job';
-                  }
-                  return null;
-                }),
-                decoration: const InputDecoration(
-                  labelText: 'Geolocation',
-                )),
-
-            const SizedBox(
-              height: 20,
-            ),
-            ElevatedButton(
-                onPressed: () {
-                  //calculate number of hours worked
-                  final hours =
-                      confirmedDateValue.difference(dateValue).inMinutes / 60;
-                  if (_formKey.currentState!.validate()) {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(content: Text('Loading, please wait')));
-
-                    _uploadImgAndSubmit(photoList, hours);
-                  }
-                },
-                child: const Text('Submit')),
-          ]),
-        ),
-      )),
-    );
+          )),
+        ));
   }
 }
