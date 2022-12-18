@@ -11,6 +11,7 @@ import 'package:flutter/scheduler.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:flutter/foundation.dart';
+import 'package:jiffy/jiffy.dart';
 import 'package:localstorage/localstorage.dart';
 
 class JobForm extends StatefulWidget {
@@ -150,32 +151,11 @@ class _JobFormState extends State<JobForm> {
       'hoursWorked': workedHours,
       'docketImages': docketImagesUrl,
       'fittedImages': fittedItemsImagesUrl,
-      'damagedImages': damagedImagesUrl
+      'damagedImages': damagedImagesUrl,
+      'weekOfYear': Jiffy(confirmedDateValue).week,
+      'year': Jiffy(confirmedDateValue).year,
+      'month': Jiffy(confirmedDateValue).month
     });
-  }
-
-//On Submit clear function
-  _clearForm() {
-    geolocationValue = '';
-    docketNumberValue = '';
-    notesValue = '';
-    serviceCallValue = '';
-    sqmValue = '';
-
-    //Docket Images
-    docketPhotoList.clear();
-    docketPhotoNames.clear();
-    docketImagesUrl.clear();
-
-    //Damaged or Incorrectly Measured Products
-    damagedPhotoList.clear();
-    damagedPhotoNames.clear();
-    damagedImagesUrl.clear();
-
-    //Fitted Items
-    fittedItemsPhotoList.clear();
-    fittedItemsPhotoNames.clear();
-    fittedItemsImagesUrl.clear();
   }
 
   @override
@@ -378,7 +358,7 @@ class _JobFormState extends State<JobForm> {
                             },
                             child: const Text('Finish Job')),
                         TextFormField(
-                          enabled: false,
+                          enabled: true,
                           controller: endDateTimeText,
                           validator: ((value) {
                             if (value == null || value.isEmpty) {

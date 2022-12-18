@@ -2,6 +2,7 @@ import 'package:eamon_app/home.dart';
 import 'package:eamon_app/jobForm.dart';
 import 'package:eamon_app/login.dart';
 import 'package:eamon_app/register.dart';
+import 'package:eamon_app/sqmReport.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
@@ -36,7 +37,8 @@ class MyApp extends StatelessWidget {
           'home': (context) => const HomePage(),
           'login': (context) => const LoginPage(),
           'register': (context) => const RegisterPage(),
-          'form': ((context) => const JobForm())
+          'form': ((context) => const JobForm()),
+          'sqmReport': (context) => const SQMReport()
         },
         theme: ThemeData.light(),
         home: FutureBuilder(

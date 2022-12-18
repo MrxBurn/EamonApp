@@ -25,6 +25,12 @@ class HomePage extends StatelessWidget {
               FirebaseAuth.instance.signOut();
             }),
             child: const Text('Sign Out'),
+          ),
+          ElevatedButton(
+            onPressed: (() {
+              Navigator.of(context).pushNamed('sqmReport');
+            }),
+            child: const Text('SQM Report'),
           )
         ],
       )),
