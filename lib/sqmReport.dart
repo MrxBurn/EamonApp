@@ -1,6 +1,7 @@
 // ignore_for_file: prefer_const_literals_to_create_immutables, sort_child_properties_last, prefer_const_constructors
 
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:collection/collection.dart';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 
@@ -22,19 +23,32 @@ class SQMReport extends StatefulWidget {
 
 class _SQMReportState extends State<SQMReport> {
   String selectedValue = 'week';
+  List<int> weeks = [];
+  var dates = <Map<String, dynamic>>[];
+
   var firestore = FirebaseFirestore.instance;
-  List data = [];
 
   getMarker() async {
     var snapshot = await firestore.collection('jobs').get();
 
     //get all data
-    var y = snapshot.docs.map((e) => e.data());
-    var x = y.toList();
+    var data = snapshot.docs.map((e) => e.data());
+    var datesData = data.toList();
 
-    x.forEach((element) {
-      print(element['weekOfYear']);
-    });
+    for (var element in datesData) {
+      dates.add(
+          {'week': element['weekOfYear'], 'sqmValue': element['sqmValue']});
+    }
+  }
+
+  @override
+  void initState() {
+    // TODO: implement initState
+    super.initState();
+
+    for (int i = 1; i <= 52; i++) {
+      weeks.add(i);
+    }
   }
 
   @override
